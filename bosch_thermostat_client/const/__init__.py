@@ -163,3 +163,5 @@ K_SETPOINT = "key_setpoint"
 K_TIME = "key_time"
 
 DEFAULT_STEP = "defaultStep"
+
+from .oauth2 import POINTTAPI

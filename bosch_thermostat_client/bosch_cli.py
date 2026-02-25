@@ -218,7 +218,13 @@ async def authenticate_and_save_tokens(device_id=None, token_file="tokens.json")
         print(f"✓ Tokens saved to {token_path.absolute()}")
 
 async def init_gateway(host, session, session_type, device_type, token, password):
-    BoschGateway = bosch.gateway_chooser(device_type=device_type)
+    # For OAUTH2 protocol, always use Oauth2Gateway regardless of device_type
+    if session_type == OAUTH2:
+        from bosch_thermostat_client.gateway import Oauth2Gateway
+        BoschGateway = Oauth2Gateway
+    else:
+        BoschGateway = bosch.gateway_chooser(device_type=device_type)
+    
     if (session_type == OAUTH2):
         # cloud API (OAUTH2 authentication)
         token_file = Path(token)

@@ -119,8 +119,18 @@ class IVTCircuit(CircuitWithSchedule):
             if not target_uri:
                 _LOGGER.debug("Not setting temp. Don't know how")
                 return False
+            
+            # Try setting the temperature on the target URI
             result = await self._connector.put(target_uri, temperature)
             _LOGGER.debug("Set temperature for %s with result %s", self.name, result)
+            
+            # If write failed (e.g., 403 in AUTO mode), try temporary setpoint
+            if not result and self._op_mode.is_auto and 'temporaryRoomSetpoint' in self._data:
+                _LOGGER.info("Setting permanent setpoint failed (likely AUTO mode with schedule). Using temporary override until next schedule point.")
+                temp_setpoint_uri = self._data['temporaryRoomSetpoint'][URI]
+                result = await self._connector.put(temp_setpoint_uri, temperature)
+                _LOGGER.debug("Set temporary temperature override for %s with result %s", self.name, result)
+            
             if result:
                 if self._temp_setpoint:
                     self._data[self._temp_setpoint][RESULT][VALUE] = temperature

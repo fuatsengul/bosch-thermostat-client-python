@@ -17,6 +17,7 @@ from bosch_thermostat_client.const.ivt import (
     BRUDERUS
 )
 from bosch_thermostat_client.const.easycontrol import EASYCONTROL
+from bosch_thermostat_client.const.oauth2 import POINTTAPI
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +33,8 @@ DEVICE_TYPES = {
     EASYCONTROL: "easycontrol/{}.json",
     IVTAIR: "ivtair/{}.json",
     BRUDERUS: "bruderus/{}.json",
+    POINTTAPI: "pointtapi/{}.json",
+    IVT: "ivt/{}.json",
 }
 
 

@@ -40,6 +40,7 @@ class NefitGateway(BaseGateway):
         access_key=None,
         password=None,
         session=None,
+        device_type=None,
     ):
         """
         Initialize gateway.
@@ -47,7 +48,7 @@ class NefitGateway(BaseGateway):
         :param access_token:
         :param password:
         :param host:
-        :param device_type -> NEFIT
+        :param device_type: Device type (accepted for compatibility). Defaults to None.
         """
         self._access_token = access_token.replace("-", "")
 

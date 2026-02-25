@@ -42,7 +42,19 @@ class BasicCircuit(BoschSingleEntity):
     def __init__(self, connector, attr_id, db, _type, bus_type, **kwargs):
         """Basic circuit init."""
         name = attr_id.split("/").pop()
+        self._full_db = db  # Store the full database
         self._db = db[_type]
+        
+        # Handle the case where db[_type] is a list (placeholder from generic DB)
+        # Convert it to an empty dictionary to prevent AttributeError on .get()
+        if isinstance(self._db, list):
+            _LOGGER.warning(
+                f"Database entry for {_type} is a list (placeholder). "
+                "This likely means the firmware version is not specifically supported. "
+                "Using empty database structure."
+            )
+            self._db = {"refs": {}}
+        
         self._bus_type = bus_type
         super().__init__(name=name, connector=connector, attr_id=attr_id)
         self._main_uri = f"/{_type}/{self.name}"
@@ -331,7 +343,7 @@ class CircuitWithSchedule(Circuit):
             circuit_name=self.name,
             current_time=current_date,
             bus_type=bus_type,
-            db=self._db,
+            db=self._full_db,  # Pass full database instead of circuit-specific db
             op_mode=self._op_mode,
             date_format=db.get("date_format", "%Y-%m-%dT%H:%M:%S"),
         )

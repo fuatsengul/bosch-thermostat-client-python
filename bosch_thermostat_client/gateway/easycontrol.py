@@ -46,6 +46,7 @@ class EasycontrolGateway(BaseGateway):
         password=None,
         session=None,
         easycontrol_connector=None,
+        device_type=None,
     ):
         """
         Initialize gateway.
@@ -53,7 +54,7 @@ class EasycontrolGateway(BaseGateway):
         :param access_token:
         :param password:
         :param host:
-        :param device_type -> IVT or NEFIT or EASYCONTROL
+        :param device_type: Device type (accepted for compatibility). Defaults to None.
         """
         self._access_token = access_token.replace("-", "")
         if password:

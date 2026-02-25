@@ -1,75 +1,19 @@
 {
+  "versionFirmware": "13.00.03",
   "versionFirmwarePath": "/gateway/versionFirmware",
   "gateway": {
     "uuid": "/gateway/uuid",
-    "systemBus": "/system/bus",
+    "dateTime": "/gateway/dateTime",
     "versionFirmware": "/gateway/versionFirmware",
     "brand": "/system/brand",
     "systemInfo": "/system/info",
-    "systemType": "/system/systemType",
-    "dateTime": "/gateway/DateTime"
+    "versionHardware": "/gateway/versionHardware",
+    "serialId": "/gateway/serialId",
+    "timeZone": "/gateway/tzInfo/timeZone",
+    "systemBus": "/system/bus",
+    "model": "/system/appliance/model"
   },
   "models": {
-    "67": {
-      "value": "RC30",
-      "name": "RC30 Controller",
-      "type": "default"
-    },
-    "76": {
-      "value": "ES73",
-      "name": "Sieger ES73",
-      "type": "default"
-    },
-    "77": {
-      "value": "RC20",
-      "name": "RC20/Nefit Moduline 300",
-      "type": "default"
-    },
-    "78": {
-      "value": "RC30",
-      "name": "RC30/Nefit Moduline 400",
-      "type": "default"
-    },
-    "79": {
-      "value": "RC10",
-      "name": "RC10/Nefit Moduline 100",
-      "type": "default"
-    },
-    "86": {
-      "value": "RC35",
-      "name": "RC35",
-      "type": "default"
-    },
-    "93": {
-      "value": "RC20F",
-      "name": "RC20F",
-      "type": "default"
-    },
-    "157": {
-      "value": "RC200",
-      "name": "RC200/CW100",
-      "type": "RC300_RC200"
-    },
-    "158": {
-      "value": "RC300",
-      "name": "RC300/RC310/Nefit Moduline 3000",
-      "type": "RC300_RC200"
-    },
-    "172": {
-      "value": "iCom_Low_NSC_v1",
-      "name": "Enviline/Compress 6000/7000",
-      "type": "NSC_ICOM_GATEWAY"
-    },
-    "224": {
-      "value": "RC300",
-      "name": "Bosch Condens 9000i",
-      "type": "RC300_RC200"
-    },
-    "CAN": {
-      "value": "CAN",
-      "name": "iCom_low_CAN_v1 CAN",
-      "type": "CAN"
-    },
     "K30RF": {
       "value": "K30RF",
       "name": "K30 RF Gateway (Heat Pump)",
@@ -124,6 +68,21 @@
         "id": "overallStatus",
         "name": "Status",
         "type": "regular"
+      },
+      "heating_type": {
+        "id": "heatingType",
+        "name": "Heating type",
+        "type": "regular"
+      },
+      "max_flow_temp": {
+        "id": "maxFlowTemp",
+        "name": "Max flow temperature",
+        "type": "number"
+      },
+      "room_temp_offset": {
+        "id": "roomTempOffset",
+        "name": "Room temperature offset",
+        "type": "number"
       },
       "currentRoomSetpoint": {
         "id": "currentRoomSetpoint",
@@ -293,6 +252,7 @@
       }
     }
   },
+  "solarCircuits": [],
   "heatSources": {
     "refs": {
       "source_type": {

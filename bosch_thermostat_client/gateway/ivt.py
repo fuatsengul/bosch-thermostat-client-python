@@ -44,6 +44,7 @@ class IVTGateway(BaseGateway):
         access_key=None,
         password=None,
         session=None,
+        device_type=None,
     ):
         """IVT Gateway constructor
 
@@ -53,6 +54,7 @@ class IVTGateway(BaseGateway):
             host (str): host IP or hostname for HTTP or serial number for XMPP
             access_key (str): access key to Bosch Gateway
             password (str, optional): Password to Bosch Gateway. Defaults to None.
+            device_type (str, optional): Device type (accepted for compatibility). Defaults to None.
         """
         self._access_token = access_token.replace("-", "")
         if password:

@@ -19,6 +19,7 @@ from bosch_thermostat_client.const import (
     REFERENCES,
     SYSTEM_BUS,
     UUID,
+    DHW,
 )
 from bosch_thermostat_client.const.ivt import SYSTEM_INFO
 from bosch_thermostat_client.const.oauth2 import CIRCUIT_TYPES, SYSTEM_MODEL
@@ -80,7 +81,7 @@ class Oauth2Gateway(BaseGateway):
             loop=session,
             token_file=token_file,
         )
-        self._data = {GATEWAY: {}}
+        self._data = {GATEWAY: {}, HC: None, DHW: None, AC: None, SENSORS: None}
         super().__init__(host)
 
     async def _update_info(self, initial_db):
@@ -96,6 +97,29 @@ class Oauth2Gateway(BaseGateway):
                 _LOGGER.debug("Can't fetch data for update_info %s", err)
                 pass
 
+    def _update_circuit_types(self, device_type):
+        """Update circuit types based on detected device type.
+        
+        This ensures we only initialize circuits that the device actually has.
+        For example, IVT heat pumps don't have AC circuits.
+        """
+        from bosch_thermostat_client.const.oauth2 import CIRCUIT_TYPES as OAUTH2_CIRCUIT_TYPES
+        from bosch_thermostat_client.const.ivt import CIRCUIT_TYPES as IVT_CIRCUIT_TYPES
+        from bosch_thermostat_client.const.easycontrol import CIRCUIT_TYPES as EASYCONTROL_CIRCUIT_TYPES
+        
+        _LOGGER.debug(f"_update_circuit_types called with device_type={device_type}")
+        
+        if device_type == "IVT":
+            self.circuit_types = IVT_CIRCUIT_TYPES
+            _LOGGER.info(f"✓ Updated circuit types to IVT: {list(IVT_CIRCUIT_TYPES.keys())}")
+        elif device_type == "EASYCONTROL":
+            self.circuit_types = EASYCONTROL_CIRCUIT_TYPES
+            _LOGGER.info(f"✓ Updated circuit types to EASYCONTROL: {list(EASYCONTROL_CIRCUIT_TYPES.keys())}")
+        else:
+            # For IVTAIR and other types, use OAuth2 circuit types
+            self.circuit_types = OAUTH2_CIRCUIT_TYPES
+            _LOGGER.info(f"✓ Updated circuit types to {device_type}: {list(OAUTH2_CIRCUIT_TYPES.keys())}")
+
     def get_device_model(self, _db):
         """Find device model."""
         system_bus = self._data[GATEWAY].get(SYSTEM_BUS)
@@ -103,28 +127,151 @@ class Oauth2Gateway(BaseGateway):
         self._bus_type = system_bus
         system_info = self._data[GATEWAY].get(SYSTEM_INFO)
         attached_devices = {}
+        _LOGGER.warning(f"[Detection] init")
+        # Initialize detected type from user config
+        self._detected_device_type = self.device_type
+        
+        # DETECTION METHOD 1: Check hardware version
+        hw_version = self._data[GATEWAY].get("versionHardware", "")
+        _LOGGER.debug(f"[Detection] versionHardware from GATEWAY data: '{hw_version}'")
+        if hw_version and "K30RF" in hw_version:
+            _LOGGER.info(f"✓ [Detection] Detected K30RF heat pump from versionHardware: {hw_version}")
+            self._detected_device_type = "IVT"
+        
+        # DETECTION METHOD 2: Check system_info for heat pump modules
         if system_info:
-            for info in system_info:
-                _id = info.get("ModuleHwIdentStr", -1)
+            _LOGGER.debug(f"[Detection] System info available with {len(system_info)} devices")
+            for i, info in enumerate(system_info):
+                if not isinstance(info, dict):
+                    _LOGGER.debug(f"[Detection] Skipping non-dict entry {i}: {type(info)}")
+                    continue
+                    
+                _id = info.get("ModuleHwIdentStr", "")
+                _LOGGER.debug(f"[Detection] Device {i}: ModuleHwIdentStr='{_id}'")
+                
+                # Check if this is a heat pump device
+                if _id in ("CUHP", "K30RF", "HMC310"):
+                    _LOGGER.info(f"✓ [Detection] Detected heat pump hardware in system_info: {_id}")
+                    self._detected_device_type = "IVT"
+                
                 model = model_scheme.get(_id)
+                
+                # 2. Try Tok field (numeric ID)
+                if not model:
+                    tok = info.get("Tok", -1)
+                    if tok != -1:
+                        _LOGGER.debug(f"  [Detection] Checking Tok: {tok}")
+                        model = model_scheme.get(tok)
+                
+                # 3. Try to find by value match
+                if not model:
+                    for key, val in model_scheme.items():
+                        if isinstance(val, dict) and val.get("value") == _id:
+                            model = val
+                            _id = key
+                            break
+                
                 if model is not None:
-                    _LOGGER.debug("Found supported device %s with id %s", model, _id)
-                    attached_devices[_id] = model
+                    _LOGGER.debug(f"  [Detection] Found model: {model}")
+                    attached_devices[str(_id)] = model
+            
             if attached_devices:
                 found_model = attached_devices[sorted(attached_devices.keys())[-1]]
-                _LOGGER.debug("Using model %s as database schema", found_model[VALUE])
+                _LOGGER.debug("[Detection] Using detected model %s as database schema", found_model[VALUE])
                 return found_model
+        else:
+            _LOGGER.debug("[Detection] No system_info available for device detection")
+        
+        # DETECTION METHOD 3: Check by system model
         sys_model = self._data[GATEWAY].get(SYSTEM_MODEL)
         if sys_model:
+            _LOGGER.debug(f"[Detection] Checking SYSTEM_MODEL: {sys_model}")
             model = model_scheme.get(sys_model)
             if model is not None:
-                _LOGGER.debug("Found supported device %s", model)
+                _LOGGER.debug("[Detection] Found model via SYSTEM_MODEL: %s", model)
                 return model
 
+        # Fallback: create a generic model with detected device type
+        if model_scheme:
+            _LOGGER.info(f"[Detection] Creating generic model for device_type={self._detected_device_type}")
+            generic_model = {
+                VALUE: f"generic_{self._detected_device_type}",
+                "name": f"Generic {self._detected_device_type} Device (OAuth2)",
+                TYPE: self._detected_device_type
+            }
+            _LOGGER.warning(
+                "[Detection] No specific device model found. Using generic model for device_type=%s", 
+                self._detected_device_type
+            )
+            return generic_model
+        
         _LOGGER.error(
             "I cannot find supported device. Your devices: %s", json.dumps(system_info)
         )
         exit(1)
+
+    async def initialize(self):
+        """Initialize gateway asynchronously.
+        
+        Override base class to handle OAuth2 where firmware version might not be available.
+        """
+        from bosch_thermostat_client.db import get_initial_db
+        
+        initial_db = await self.get_base_db()
+        await self._update_info(initial_db.get(GATEWAY))
+        self._firmware_version = self._data[GATEWAY].get(FIRMWARE_VERSION)
+        self._device = self.get_device_model(initial_db)
+        
+        if self._device and VALUE in self._device:
+            _LOGGER.debug("Found device %s", json.dumps(self._device))
+            
+            # Get the detected device type
+            detected_type = self._device.get(TYPE, self.device_type)
+            _LOGGER.info(f"[Init] Device model TYPE: {self._device.get(TYPE)} | Detected: {detected_type} | User config: {self.device_type}")
+            
+            # If detected type differs from user's config, reload the correct database
+            if detected_type != self.device_type:
+                _LOGGER.info(
+                    f"🔄 [Init] Device type mismatch! User selected {self.device_type}, "
+                    f"but device is {detected_type}. Reloading correct database..."
+                )
+                initial_db = await get_initial_db(detected_type)
+                if not initial_db:
+                    _LOGGER.error(f"Could not load database for detected type {detected_type}")
+                    raise UnknownDevice(f"Cannot load database for device type {detected_type}")
+                _LOGGER.info(f"✓ [Init] Successfully reloaded {detected_type} database")
+            
+            # Update circuit types based on detected device type
+            # This ensures we only try to initialize circuits that the device actually has
+            self._update_circuit_types(detected_type)
+            
+            # For OAuth2, try to load firmware-specific DB, but don't fail if we can't
+            if self._firmware_version:
+                self._db = await get_db_of_firmware(
+                    detected_type, self._firmware_version
+                )
+                if self._db:
+                    _LOGGER.debug(
+                        f"Loading database: {detected_type} for firmware {self._firmware_version}"
+                    )
+                    initial_db.pop(MODELS, None)
+                    self._db.update(initial_db)
+                    self._errors = await async_get_errors(self.device_type)
+                    self._initialized = True
+                    return
+                _LOGGER.warning(
+                    f"Could not find firmware-specific database for {self._firmware_version}. Using initial database."
+                )
+            
+            # Fallback: use initial database without firmware-specific DB
+            _LOGGER.info(f"Using {detected_type} database for OAuth2 connection")
+            initial_db.pop(MODELS, None)
+            self._db = initial_db
+            self._errors = await async_get_errors(self.device_type)
+            self._initialized = True
+            return
+        
+        raise UnknownDevice("Your device is unknown %s" % json.dumps(self._device))
 
     async def initialize_circuits(self, circ_type):
         """Initialize circuits for PoinTT API.
@@ -132,6 +279,22 @@ class Oauth2Gateway(BaseGateway):
         PoinTT API doesn't expose circuit discovery endpoints. We create the single
         AC circuit directly instead of using the crawl() discovery mechanism.
         """
+        # Get the database key for this circuit type
+        db_key = CIRCUIT_TYPES.get(circ_type)
+        
+        # Check if this circuit type is supported in the database
+        if db_key not in self._db:
+            _LOGGER.debug(f"Circuit type {circ_type} ({db_key}) not supported in database, skipping")
+            return []
+        
+        # Log warning if we're using placeholder database entries (list instead of dict)
+        if isinstance(self._db.get(db_key), list):
+            _LOGGER.warning(
+                f"Circuit type {circ_type} ({db_key}) has placeholder database entry. "
+                f"Firmware {self._firmware_version} may not be fully supported. "
+                "Attempting to create circuit with limited functionality."
+            )
+        
         if circ_type == AC:
             # Create Circuits container
             self._data[circ_type] = Circuits(
@@ -155,7 +318,7 @@ class Oauth2Gateway(BaseGateway):
                     connector=self._connector,
                     attr_id=circuit_id,
                     db=self._db,
-                    _type=CIRCUIT_TYPES[circ_type],  # Maps AC -> "acCircuits"
+                    _type=db_key,  # Maps AC -> "acCircuits"
                     bus_type=self._bus_type,
                 )
                 _LOGGER.debug(f"Created AC circuit object: {circuit_object}")

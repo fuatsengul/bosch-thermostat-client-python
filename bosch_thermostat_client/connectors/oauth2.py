@@ -251,13 +251,18 @@ class Oauth2Connector:
         data = {
             'grant_type': 'refresh_token',
             'refresh_token': self._refresh_token,
-            'scope': ' '.join(self.SCOPES),
             'client_id': self.CLIENT_ID,
-            'code_verifier': self.CODE_VERIFIER,
         }
+        
+        _LOGGER.debug(f"[Token Refresh] Attempting to refresh token. refresh_token length: {len(self._refresh_token)}, client_id: {self.CLIENT_ID}")
+        _LOGGER.debug(f"[Token Refresh] Sending to {self.TOKEN_URL} with data keys: {list(data.keys())}")
 
         try:
             async with self._websession.post(self.TOKEN_URL, data=data) as response:
+                _LOGGER.debug(f"[Token Refresh] Response status: {response.status}")
+                response_text = await response.text()
+                _LOGGER.debug(f"[Token Refresh] Response body: {response_text[:200]}")
+                
                 if response.status == 200:
                     token_data = await response.json()
                     self._access_token = token_data.get('access_token')
@@ -271,8 +276,10 @@ class Oauth2Connector:
                     _LOGGER.info("Successfully refreshed access token (expires in %s seconds)", expires_in)
                     return True
                 else:
+                    _LOGGER.error(f"[Token Refresh] Failed with status {response.status}. Response: {response_text[:500]}")
                     raise DeviceException(f"Token refresh failed: {response.status}")
         except Exception as e:
+            _LOGGER.error(f"[Token Refresh] Exception: {e}")
             raise DeviceException(f"Error refreshing token: {e}")
 
     async def _ensure_valid_token(self):
@@ -507,15 +514,21 @@ class Oauth2Connector:
         """
         data = {
             "grant_type": "authorization_code",
-            "scope": " ".join(self.SCOPES),
             "code": code,
             "redirect_uri": self.REDIRECT_URI,
             "client_id": self.CLIENT_ID,
             "code_verifier": self.CODE_VERIFIER,
         }
+        
+        _LOGGER.debug(f"[Token Exchange] Sending token exchange with code: {code[:30]}...")
+        _LOGGER.debug(f"[Token Exchange] Redirect URI: {self.REDIRECT_URI}")
 
         try:
             async with self._websession.post(self.TOKEN_URL, data=data) as response:
+                response_text = await response.text()
+                _LOGGER.debug(f"[Token Exchange] Response status: {response.status}")
+                _LOGGER.debug(f"[Token Exchange] Response body: {response_text[:300]}")
+                
                 if response.status == 200:
                     response_json = await response.json()
 

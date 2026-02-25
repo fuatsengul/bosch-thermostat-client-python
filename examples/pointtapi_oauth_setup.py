@@ -66,6 +66,7 @@ async def authenticate_and_save_tokens(device_id=None, token_file="tokens.json")
         GatewayClass = gateway_chooser(POINTTAPI)
         gateway = GatewayClass(
             session=session,
+            device_type=POINTTAPI,
             session_type="HTTP",
             host=device_id,
             access_key=None,
@@ -115,6 +116,17 @@ async def authenticate_and_save_tokens(device_id=None, token_file="tokens.json")
 
         print("✓ Successfully obtained OAuth tokens!")
 
+        # Step 4b: Refresh token immediately to ensure it's valid for future use
+        print("\n[Step 4b] Refreshing token to ensure validity...")
+        try:
+            refresh_success = await connector._refresh_access_token()
+            if refresh_success:
+                print("✓ Token refreshed successfully! Fresh token ready for storage.")
+            else:
+                print("⚠️  Token refresh returned False, but continuing with original tokens...")
+        except Exception as e:
+            print(f"⚠️  Token refresh failed ({e}), but continuing with original tokens...")
+
         # Step 5: Save tokens to file
         print(f"\n[Step 5] Saving tokens to {token_file}...")
         token_data = {
@@ -137,6 +149,7 @@ async def authenticate_and_save_tokens(device_id=None, token_file="tokens.json")
                 # Create a new gateway with the real tokens
                 test_gateway = GatewayClass(
                     session=session,
+                    device_type=POINTTAPI,
                     session_type="HTTP",
                     host=device_id,
                     access_key=None,
@@ -184,13 +197,14 @@ async def main():
             print("   - Use the device_id, access_token, and refresh_token")
             print("   - HA will automatically refresh tokens as needed")
             print("3. For standalone scripts:")
-            print("   - Load tokens.json and create PoinTTAPIGateway")
+            print("   - Load tokens.json and create gateway using gateway_chooser")
             print("   - Tokens will auto-refresh when expired")
             print("\nExample usage in Python:")
             print("""
     import json
     import aiohttp
-    from bosch_thermostat_client.gateway.pointtapi import PoinTTAPIGateway
+    from bosch_thermostat_client import gateway_chooser
+    from bosch_thermostat_client.const import POINTTAPI
 
     # Load tokens
     with open('tokens.json') as f:
@@ -198,8 +212,10 @@ async def main():
 
     # Create gateway
     async with aiohttp.ClientSession() as session:
-        gateway = PoinTTAPIGateway(
+        GatewayClass = gateway_chooser(POINTTAPI)
+        gateway = GatewayClass(
             session=session,
+            device_type=POINTTAPI,
             session_type="HTTP",
             host=tokens['device_id'],
             access_key=None,
