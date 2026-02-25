@@ -110,21 +110,26 @@ class IVTCircuit(CircuitWithSchedule):
         if self.min_temp <= temperature <= self.max_temp and target_temp != temperature:
             target_uri = None
             
-            # In AUTO mode, always use temporaryRoomSetpoint for temporary override
-            # This is what the IVT app does: "temperature will be set to XX until next program"
-            if self._op_mode.is_auto and 'temporaryRoomSetpoint' in self._data:
-                target_uri = self._data['temporaryRoomSetpoint'][URI]
-                _LOGGER.info(
-                    "AUTO mode: Setting temporary override to %.1f°C until next schedule point",
-                    temperature
-                )
-            elif self._temp_setpoint:
-                target_uri = self._data[self._temp_setpoint][URI]
-            elif self._op_mode.is_auto:
-                target_uri = self.schedule.get_uri_setpoint_for_current_mode()
-                if target_uri == ACTIVE_PROGRAM:
-                    active_program_not_in_schedule = True
-                    target_uri = self._data[self.active_program_setpoint][URI]
+            # In AUTO mode, use the manual/temporary setpoint for override
+            # HC uses temporaryRoomSetpoint, DHW uses temporarySetpoint
+            # We read the correct key from mode_to_setpoint["manual"]["setpoint"]
+            if self._op_mode.is_auto:
+                temp_override_key = self._op_mode._mode_to_setpoint.get("manual", {}).get("setpoint")
+                if temp_override_key and temp_override_key in self._data:
+                    target_uri = self._data[temp_override_key][URI]
+                    _LOGGER.info(
+                        "AUTO mode: Setting temporary override to %.1f°C via %s until next schedule point",
+                        temperature, temp_override_key
+                    )
+            
+            if not target_uri:
+                if self._temp_setpoint:
+                    target_uri = self._data[self._temp_setpoint][URI]
+                elif self._op_mode.is_auto:
+                    target_uri = self.schedule.get_uri_setpoint_for_current_mode()
+                    if target_uri == ACTIVE_PROGRAM:
+                        active_program_not_in_schedule = True
+                        target_uri = self._data[self.active_program_setpoint][URI]
             
             if not target_uri:
                 _LOGGER.debug("Not setting temp. Don't know how")
