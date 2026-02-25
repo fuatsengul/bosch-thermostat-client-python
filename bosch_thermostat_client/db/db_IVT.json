@@ -92,8 +92,8 @@
         "setpoint": "currentRoomSetpoint"
       }
     },
-    "min_ref": "currentRoomSetpoint",
-    "max_ref": "currentRoomSetpoint",
+    "min_ref": "temporaryRoomSetpoint",
+    "max_ref": "temporaryRoomSetpoint",
     "hastates": [
       {
         "boschname": ["manual"],
@@ -102,10 +102,6 @@
       {
         "boschname": ["auto"],
         "haname": "auto"
-      },
-      {
-        "boschname": ["off"],
-        "haname": "off"
       }
     ],
     "refs": {
@@ -139,6 +135,21 @@
         "name": "Temporary Room Setpoint",
         "type": "regular"
       },
+      "temperatureLevels_comfort2": {
+        "id": "temperatureLevels/comfort2",
+        "name": "Comfort temperature level",
+        "type": "setpoint"
+      },
+      "temperatureLevels_eco": {
+        "id": "temperatureLevels/eco",
+        "name": "ECO temperature level",
+        "type": "setpoint"
+      },
+      "active_program": {
+        "id": "activeSwitchProgram",
+        "name": "Active switch program",
+        "type": "activeProgram"
+      },
       "switch_programs": {
         "id": "switchPrograms",
         "name": "Switch Programs",
@@ -162,13 +173,20 @@
       },
       "overall_status": {
         "id": "overallStatus",
-        "name": "Status",
+        "name": "Heating Status",
         "writeable": false,
         "type": "sensor"
       },
-      "current_setpoint": {
-        "id": "currentRoomSetpoint",
-        "name": "Heating Current Setpoint",
+      "comfort2_temp": {
+        "id": "temperatureLevels/comfort2",
+        "name": "Comfort temperature level",
+        "unitOfMeasure": "C",
+        "device_class": "temperature",
+        "state_class": "measurement"
+      },
+      "eco_temp": {
+        "id": "temperatureLevels/eco",
+        "name": "ECO temperature level",
         "unitOfMeasure": "C",
         "device_class": "temperature",
         "state_class": "measurement"
