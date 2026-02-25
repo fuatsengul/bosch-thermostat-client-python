@@ -107,38 +107,45 @@ class IVTCircuit(CircuitWithSchedule):
         if target_temp == temperature:
             _LOGGER.debug("Temperature is the same as already set. Exiting")
             return True
-        if self.min_temp < temperature < self.max_temp and target_temp != temperature:
+        if self.min_temp <= temperature <= self.max_temp and target_temp != temperature:
             target_uri = None
-            if self._temp_setpoint:
+            
+            # In AUTO mode, always use temporaryRoomSetpoint for temporary override
+            # This is what the IVT app does: "temperature will be set to XX until next program"
+            if self._op_mode.is_auto and 'temporaryRoomSetpoint' in self._data:
+                target_uri = self._data['temporaryRoomSetpoint'][URI]
+                _LOGGER.info(
+                    "AUTO mode: Setting temporary override to %.1f°C until next schedule point",
+                    temperature
+                )
+            elif self._temp_setpoint:
                 target_uri = self._data[self._temp_setpoint][URI]
             elif self._op_mode.is_auto:
                 target_uri = self.schedule.get_uri_setpoint_for_current_mode()
                 if target_uri == ACTIVE_PROGRAM:
                     active_program_not_in_schedule = True
                     target_uri = self._data[self.active_program_setpoint][URI]
+            
             if not target_uri:
                 _LOGGER.debug("Not setting temp. Don't know how")
                 return False
             
-            # Try setting the temperature on the target URI
-            result = await self._connector.put(target_uri, temperature)
-            _LOGGER.debug("Set temperature for %s with result %s", self.name, result)
-            
-            # If write failed (e.g., 403 in AUTO mode), try temporary setpoint
-            if not result and self._op_mode.is_auto and 'temporaryRoomSetpoint' in self._data:
-                _LOGGER.info("Setting permanent setpoint failed (likely AUTO mode with schedule). Using temporary override until next schedule point.")
-                temp_setpoint_uri = self._data['temporaryRoomSetpoint'][URI]
-                result = await self._connector.put(temp_setpoint_uri, temperature)
-                _LOGGER.debug("Set temporary temperature override for %s with result %s", self.name, result)
+            try:
+                result = await self._connector.put(target_uri, temperature)
+                _LOGGER.debug("Set temperature for %s with result %s", self.name, result)
+            except Exception as err:
+                _LOGGER.error("Failed to set temperature on %s: %s", target_uri, err)
+                return False
             
             if result:
-                if self._temp_setpoint:
+                if self._temp_setpoint and not self._op_mode.is_auto:
                     self._data[self._temp_setpoint][RESULT][VALUE] = temperature
                 elif not active_program_not_in_schedule and self.schedule:
                     self.schedule.cache_temp_for_mode(temperature)
                 return True
         _LOGGER.error(
-            "Setting temperature not allowed in this mode. Temperature is probably out of range MIN-MAX!"
+            "Setting temperature not allowed in this mode. Temperature %.1f is out of range [%.1f-%.1f]!",
+            temperature, self.min_temp, self.max_temp
         )
         return False
 
