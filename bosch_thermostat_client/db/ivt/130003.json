@@ -166,29 +166,49 @@
   },
   "dhwCircuits": {
     "mode_to_setpoint": {
-      "manual": {
-        "type": "manual",
-        "setpoint": "temporarySetpoint"
+      "Off": {
+        "setpoint": null,
+        "type": "off"
       },
-      "auto": {
-        "type": "auto",
-        "setpoint": "currentSetpoint"
+      "low": {
+        "setpoint": "setpoint_low",
+        "type": "manual"
+      },
+      "eco": {
+        "setpoint": "setpoint_eco",
+        "type": "manual"
+      },
+      "high": {
+        "setpoint": "setpoint_high",
+        "type": "manual"
+      },
+      "ownprogram": {
+        "setpoint": null,
+        "type": "auto"
       }
     },
     "min_ref": "currentSetpoint",
     "max_ref": "currentSetpoint",
     "hastates": [
       {
-        "boschname": ["manual"],
-        "haname": "on"
-      },
-      {
-        "boschname": ["auto"],
-        "haname": "auto"
-      },
-      {
-        "boschname": ["off"],
+        "boschname": ["Off"],
         "haname": "off"
+      },
+      {
+        "boschname": ["low"],
+        "haname": "eco+"
+      },
+      {
+        "boschname": ["eco"],
+        "haname": "eco"
+      },
+      {
+        "boschname": ["high"],
+        "haname": "performance"
+      },
+      {
+        "boschname": ["ownprogram"],
+        "haname": "auto"
       }
     ],
     "refs": {
@@ -217,9 +237,34 @@
         "name": "Current Setpoint",
         "type": "regular"
       },
-      "temporarySetpoint": {
-        "id": "temporarySetpoint",
-        "name": "Temporary Setpoint",
+      "setpoint_eco": {
+        "id": "temperatureLevels/eco",
+        "name": "ECO temperature",
+        "type": "setpoint"
+      },
+      "setpoint_low": {
+        "id": "temperatureLevels/low",
+        "name": "ECO+ temperature",
+        "type": "setpoint"
+      },
+      "setpoint_high": {
+        "id": "temperatureLevels/high",
+        "name": "Comfort temperature",
+        "type": "setpoint"
+      },
+      "setpoint_off": {
+        "id": "temperatureLevels/off",
+        "name": "Off temperature",
+        "type": "setpoint"
+      },
+      "singleChargeSetpoint": {
+        "id": "singleChargeSetpoint",
+        "name": "Extra hot water setpoint",
+        "type": "regular"
+      },
+      "chargeDuration": {
+        "id": "chargeDuration",
+        "name": "Charge duration",
         "type": "regular"
       },
       "switch_programs": {
@@ -243,9 +288,39 @@
         "device_class": "temperature",
         "state_class": "measurement"
       },
-      "current_setpoint": {
-        "id": "currentSetpoint",
-        "name": "DHW Current Setpoint",
+      "single_charge_setpoint": {
+        "id": "singleChargeSetpoint",
+        "name": "Extra hot water setpoint",
+        "unitOfMeasure": "C",
+        "device_class": "temperature",
+        "state_class": "measurement"
+      },
+      "charge_duration": {
+        "id": "chargeDuration",
+        "name": "Charge duration",
+        "unitOfMeasure": "mins"
+      },
+      "overall_status": {
+        "id": "overallStatus",
+        "name": "DHW overall status"
+      },
+      "eco_temp": {
+        "id": "temperatureLevels/eco",
+        "name": "DHW ECO temperature",
+        "unitOfMeasure": "C",
+        "device_class": "temperature",
+        "state_class": "measurement"
+      },
+      "low_temp": {
+        "id": "temperatureLevels/low",
+        "name": "DHW ECO+ temperature",
+        "unitOfMeasure": "C",
+        "device_class": "temperature",
+        "state_class": "measurement"
+      },
+      "high_temp": {
+        "id": "temperatureLevels/high",
+        "name": "DHW Comfort temperature",
         "unitOfMeasure": "C",
         "device_class": "temperature",
         "state_class": "measurement"
