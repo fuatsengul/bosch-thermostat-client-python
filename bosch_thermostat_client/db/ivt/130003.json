@@ -40,11 +40,15 @@
     "max_ref": "currentRoomSetpoint",
     "hastates": [
       {
-        "boschname": "on",
+        "boschname": ["manual"],
         "haname": "heat"
       },
       {
-        "boschname": "off",
+        "boschname": ["auto"],
+        "haname": "auto"
+      },
+      {
+        "boschname": ["off"],
         "haname": "off"
       }
     ],
@@ -175,11 +179,15 @@
     "max_ref": "currentSetpoint",
     "hastates": [
       {
-        "boschname": "on",
-        "haname": "heat"
+        "boschname": ["manual"],
+        "haname": "on"
       },
       {
-        "boschname": "off",
+        "boschname": ["auto"],
+        "haname": "auto"
+      },
+      {
+        "boschname": ["off"],
         "haname": "off"
       }
     ],
